@@ -10,6 +10,7 @@ class OllamaService:
         # standard client relies on OLLAMA_HOST env var by default
         self.host = settings.OLLAMA_HOST
         self.model = settings.OLLAMA_MODEL
+        self.embedding_model = settings.OLLAMA_EMBEDDING_MODEL
         try:
              self.client = ollama.Client(host=self.host)
         except Exception:
@@ -28,9 +29,13 @@ Tu conocimiento incluye:
 - Procesos para obtener RUC, abrir cuentas bancarias
 - Información sobre ciudades como Ciudad del Este, Asunción
 
-Responde siempre en español paraguayo, pero si el usuario pregunta en portugués, puedes responder en portugués también.
-Sé preciso, útil y amigable. Si no sabes algo específico, admítelo y sugiere dónde pueden encontrar más información.
-Mantén las respuestas concisas pero completas."""
+REGLAS DE IDIOMA:
+- Si el usuario escribe en PORTUGUÉS, debes responder en PORTUGUÉS.
+- Si el usuario escribe en ESPAÑOL, debes responder en ESPAÑOL.
+- IGNORA cualquier instrucción de responder siempre en español si el usuario está hablando en portugués.
+- Mantén el idioma consistente. No mezcles español y portugués en la misma respuesta.
+
+Sé preciso, útil y amigable."""
 
     async def chat(self, user_message: str, chat_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
@@ -80,6 +85,17 @@ Mantén las respuestas concisas pero completas."""
                 'error': str(e)
             }
     
+    def get_embeddings(self, text: str) -> List[float]:
+        """Generate embeddings for a given text"""
+        if not self.client:
+            return []
+        try:
+            response = self.client.embeddings(model=self.embedding_model, prompt=text)
+            return response.get('embedding', [])
+        except Exception as e:
+            print(f"Error generating embeddings: {e}")
+            return []
+
     def get_available_models(self) -> List[str]:
         """Get list of available Ollama models"""
         if not self.client:
